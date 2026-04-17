@@ -174,6 +174,167 @@ export class CtxGitRepo {
   }
 
   // ====================================================================
+  // Memory map (hierarchical memory.md navigation)
+  // ====================================================================
+
+  /**
+   * Build a hierarchical map of the repo using `memory.md` (or custom) files
+   * at each level. Perfect for AI agents that need to navigate context
+   * progressively without loading the whole repo.
+   *
+   * Each folder can contain a `memory.md` file describing:
+   *   - what lives in that folder
+   *   - subfolders and their purpose
+   *   - files and their summaries
+   *   - conventions for adding new content
+   *
+   * Usage pattern for an agent:
+   *   1. readMap({ maxDepth: 1 }) → get root memory.md + list of subfolders
+   *   2. agent/LLM picks relevant subfolder
+   *   3. readMap({ rootPath: "decisions", maxDepth: 1 }) → dive deeper
+   *   4. Repeat until leaf, then readFile() specific files
+   *
+   * @param {object} [options]
+   * @param {string} [options.indexFile="memory.md"] — filename to read at each level
+   * @param {string} [options.rootPath=""] — start from this path
+   * @param {number} [options.maxDepth=3] — how many levels to recurse
+   * @param {boolean} [options.includeFileList=true] — list non-index files at each level
+   */
+  async readMap(options = {}) {
+    const indexFile = options.indexFile || "memory.md";
+    const rootPath = options.rootPath || "";
+    const maxDepth = options.maxDepth ?? 3;
+    const includeFileList = options.includeFileList ?? true;
+
+    if (!this.headTreeOid) await this.hydrateStructure();
+
+    // Resolve the starting tree OID
+    let startTreeOid = this.headTreeOid;
+    if (rootPath) {
+      const parts = rootPath.split("/").filter(Boolean);
+      for (const part of parts) {
+        const entries = this._treeEntries(startTreeOid);
+        if (entries === null) {
+          await this._fetchTree(startTreeOid);
+        }
+        const resolved = this._treeEntries(startTreeOid) || [];
+        const next = resolved.find((e) => e.name === part && e.type === "tree");
+        if (!next) throw new Error(`Path not found: ${rootPath}`);
+        startTreeOid = next.oid;
+      }
+    }
+
+    return this._buildMap(
+      startTreeOid,
+      rootPath,
+      indexFile,
+      maxDepth,
+      0,
+      includeFileList,
+    );
+  }
+
+  async _buildMap(treeOid, prefix, indexFile, maxDepth, depth, includeFileList) {
+    const entries = this._treeEntries(treeOid);
+    if (entries === null) {
+      await this._fetchTree(treeOid);
+    }
+    const resolved = this._treeEntries(treeOid) || [];
+
+    const node = {
+      path: prefix || "/",
+      description: null,
+      files: [],
+      subfolders: [],
+    };
+
+    // Look for the index file at this level
+    const indexEntry = resolved.find(
+      (e) => e.type === "blob" && e.name === indexFile,
+    );
+    if (indexEntry) {
+      const blob = await this.readBlob(indexEntry.oid);
+      node.description = new TextDecoder().decode(blob);
+      node.indexOid = indexEntry.oid;
+    }
+
+    // Collect files and subfolders
+    for (const entry of resolved) {
+      const fullPath = prefix ? `${prefix}/${entry.name}` : entry.name;
+      if (entry.type === "blob") {
+        if (entry.name === indexFile) continue; // already captured
+        if (includeFileList) {
+          node.files.push({ name: entry.name, path: fullPath, oid: entry.oid });
+        }
+      } else if (entry.type === "tree") {
+        if (depth < maxDepth) {
+          const child = await this._buildMap(
+            entry.oid,
+            fullPath,
+            indexFile,
+            maxDepth,
+            depth + 1,
+            includeFileList,
+          );
+          node.subfolders.push(child);
+        } else {
+          // Hit max depth: note the subfolder exists but don't recurse
+          node.subfolders.push({
+            path: fullPath,
+            description: null,
+            files: [],
+            subfolders: [],
+            truncated: true,
+          });
+        }
+      }
+    }
+
+    return node;
+  }
+
+  /**
+   * Format a map tree as a markdown string, suitable for feeding to an LLM.
+   *
+   * Example output:
+   *   /
+   *   Root memory: agent context for user X
+   *
+   *   ├─ profile/
+   *   │  Personal info, technical prefs
+   *   │  - personal.md
+   *   │  - work.md
+   *   ├─ decisions/
+   *   │  Log of key decisions by date
+   *   │  ...
+   */
+  static formatMap(node, indent = "") {
+    let out = "";
+    const label = node.path === "" ? "/" : node.path;
+    out += `${indent}${label}\n`;
+    if (node.description) {
+      const firstLine = node.description
+        .split("\n")
+        .filter((l) => l.trim() && !l.startsWith("#"))
+        .slice(0, 2)
+        .join(" ")
+        .slice(0, 200);
+      if (firstLine) out += `${indent}  ▸ ${firstLine}\n`;
+    }
+    for (const file of node.files) {
+      out += `${indent}  - ${file.name}\n`;
+    }
+    for (const sub of node.subfolders) {
+      if (sub.truncated) {
+        out += `${indent}  └─ ${sub.path}/ (not expanded)\n`;
+      } else {
+        out += CtxGitRepo.formatMap(sub, indent + "  ");
+      }
+    }
+    return out;
+  }
+
+  // ====================================================================
   // Write path
   // ====================================================================
 
