@@ -1,0 +1,11 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "ctx-git-worker",
+  "main": "worker.mjs",
+  "compatibility_date": "2026-04-16",
+  "compatibility_flags": ["nodejs_compat"],
+  "vars": {
+    "REPO_URL": "https://github.com/MauricioPerera/memory-poc",
+    "ACCOUNT_ID": "091122c40cc6f8d0d421cbc90e2caca8"
+  }
+}

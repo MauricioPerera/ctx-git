@@ -1,0 +1,60 @@
+{
+  "name": "ctx-git",
+  "version": "0.1.0",
+  "description": "Tiny git client for AI agents: lazy-hydration reads + commit/push from any runtime. Zero dependencies. Works in Cloudflare Workers, Node 18+, browsers, Deno.",
+  "keywords": [
+    "git",
+    "agent",
+    "ai",
+    "cloudflare",
+    "workers",
+    "edge",
+    "artifacts",
+    "partial-clone",
+    "lazy-fetch",
+    "blobless",
+    "zero-dependencies"
+  ],
+  "homepage": "https://github.com/MauricioPerera/ctx-git",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MauricioPerera/ctx-git.git"
+  },
+  "bugs": {
+    "url": "https://github.com/MauricioPerera/ctx-git/issues"
+  },
+  "author": "Mauricio Perera",
+  "license": "MIT",
+  "type": "module",
+  "main": "./src/index.mjs",
+  "exports": {
+    ".": {
+      "types": "./types/index.d.mts",
+      "import": "./src/index.mjs"
+    },
+    "./pkt-line": {
+      "types": "./types/pkt-line.d.mts",
+      "import": "./src/pkt-line.mjs"
+    },
+    "./protocol-v2": {
+      "types": "./types/protocol-v2.d.mts",
+      "import": "./src/protocol-v2.mjs"
+    }
+  },
+  "files": [
+    "src/",
+    "types/",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=18.17.0"
+  },
+  "scripts": {
+    "types": "tsc --emitDeclarationOnly --allowJs --declaration --outDir types src/*.mjs",
+    "test": "node test-phase1.mjs && node test-phase5-e2e.mjs && node test-v04.mjs"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3"
+  }
+}

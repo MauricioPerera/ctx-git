@@ -1,0 +1,9 @@
+node_modules/
+.dev.vars
+.wrangler/
+worker.mjs
+wrangler.jsonc
+test-*.mjs
+test-*.pack
+*.pack
+*.idx
