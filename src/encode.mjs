@@ -2,6 +2,7 @@
 // Inverse of objects.mjs (parse) and packfile.mjs (parse).
 
 import zlib from "node:zlib";
+import { bytesToHex, hexToBytes, concat } from "./utils.mjs";
 
 const te = new TextEncoder();
 
@@ -179,38 +180,11 @@ function encodeObjectHeader(type, size) {
   return new Uint8Array(bytes);
 }
 
-// Helpers
-
-function concat(arrays) {
-  let total = 0;
-  for (const a of arrays) total += a.length;
-  const out = new Uint8Array(total);
-  let offset = 0;
-  for (const a of arrays) {
-    out.set(a, offset);
-    offset += a.length;
-  }
-  return out;
-}
+// Helpers (module-local)
 
 function writeUint32BE(buf, offset, value) {
   buf[offset] = (value >>> 24) & 0xff;
   buf[offset + 1] = (value >>> 16) & 0xff;
   buf[offset + 2] = (value >>> 8) & 0xff;
   buf[offset + 3] = value & 0xff;
-}
-
-function bytesToHex(bytes) {
-  const hex = [];
-  for (const b of bytes) hex.push(b.toString(16).padStart(2, "0"));
-  return hex.join("");
-}
-
-function hexToBytes(hex) {
-  if (hex.length % 2 !== 0) throw new Error("Invalid hex length");
-  const bytes = new Uint8Array(hex.length / 2);
-  for (let i = 0; i < bytes.length; i++) {
-    bytes[i] = parseInt(hex.slice(i * 2, i * 2 + 2), 16);
-  }
-  return bytes;
 }

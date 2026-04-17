@@ -14,6 +14,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Streaming API for large blobs
 - Comprehensive test suite
 
+## [0.1.1] - 2026-04-17
+
+### Fixed
+
+- **Stale `headTreeOid` after successful write** — after `writeFile` / `writeFiles` / `deleteFile` succeeded, subsequent `readFile` calls on the same instance could return content from the pre-write tree. Now the new tree OID is tracked and applied to local state.
+- **Empty root tree edge case** — deleting the last remaining file(s) left the root tree as `null`, producing an invalid commit. Now an empty tree object (well-known OID `4b825dc642...`) is created explicitly, making repos that transition through empty-root states work correctly.
+- **`hexToBytes` silently accepted invalid hex** — non-hex characters were converted to `0` via `parseInt` / `NaN`. Now throws a clear error with position info.
+
+### Changed
+
+- **Extracted shared utilities to `src/utils.mjs`** — removed duplication of `stripDotGit`, `bytesToHex`, `hexToBytes`, `concat`, `basicAuth`, `USER_AGENT` that previously lived in 4 different files. No public API change; all exports still accessible from their original modules for backward compatibility where applicable.
+- `pkt-line.mjs` re-exports `concat` from utils for users depending on its previous export location.
+
+### Internal
+
+- `_prepareCommit` now returns `newRootTreeOid` alongside `newCommitOid`; consumers can update local state after successful push.
+- Added regression tests `test-regression-stale-head.mjs` covering the bugs fixed in this release.
+
 ## [0.1.0] - 2026-04-17
 
 First public release.
@@ -75,5 +93,6 @@ First public release.
 - Cloudflare Workers runtime
 - Node.js 22
 
-[Unreleased]: https://github.com/MauricioPerera/ctx-git/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/MauricioPerera/ctx-git/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/MauricioPerera/ctx-git/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/MauricioPerera/ctx-git/releases/tag/v0.1.0

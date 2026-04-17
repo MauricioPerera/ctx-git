@@ -383,7 +383,7 @@ export class CtxGitRepo {
         throw e;
       }
 
-      const { newCommitOid, newObjects } = prepared;
+      const { newCommitOid, newRootTreeOid, newObjects } = prepared;
       const packfile = await encodePackfile(
         newObjects.map((o) => ({ type: o.type, content: o.content })),
       );
@@ -404,7 +404,10 @@ export class CtxGitRepo {
       }
 
       if (result.ok) {
+        // Update local state to reflect the new commit so subsequent read/write
+        // operations use the new tree (fix for stale headTreeOid bug).
         this.headOid = newCommitOid;
+        this.headTreeOid = newRootTreeOid;
         return {
           ok: true,
           commitOid: newCommitOid,
@@ -492,6 +495,23 @@ export class CtxGitRepo {
       }
     }
 
+    // Edge case: all operations were deletes and emptied the root tree.
+    // Git allows empty trees; create one explicitly (empty trees have a
+    // well-known OID: 4b825dc642cb6eb9a060e54bf8d69288fbee4904).
+    if (currentRootOid === null) {
+      const emptyTreeContent = new Uint8Array(0);
+      const emptyTreeOid = await computeOid("tree", emptyTreeContent);
+      if (!this.objects.has(emptyTreeOid)) {
+        newObjects.push({
+          type: "tree",
+          oid: emptyTreeOid,
+          content: emptyTreeContent,
+        });
+        this.objects.set(emptyTreeOid, { type: "tree", data: emptyTreeContent });
+      }
+      currentRootOid = emptyTreeOid;
+    }
+
     // Create the commit
     const now = Math.floor(Date.now() / 1000);
     const author = formatPerson(
@@ -513,7 +533,7 @@ export class CtxGitRepo {
     newObjects.push({ type: "commit", oid: commitOid, content: commitContent });
     this.objects.set(commitOid, { type: "commit", data: commitContent });
 
-    return { newCommitOid: commitOid, newObjects };
+    return { newCommitOid: commitOid, newRootTreeOid: currentRootOid, newObjects };
   }
 
   /**

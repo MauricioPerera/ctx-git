@@ -10,6 +10,22 @@ export const ZERO_OID: "0000000000000000000000000000000000000000";
  * (lazy hydration pattern).
  */
 export class CtxGitRepo {
+    /**
+     * Format a map tree as a markdown string, suitable for feeding to an LLM.
+     *
+     * Example output:
+     *   /
+     *   Root memory: agent context for user X
+     *
+     *   ├─ profile/
+     *   │  Personal info, technical prefs
+     *   │  - personal.md
+     *   │  - work.md
+     *   ├─ decisions/
+     *   │  Log of key decisions by date
+     *   │  ...
+     */
+    static formatMap(node: any, indent?: string): string;
     constructor(url: any, options?: {});
     url: any;
     token: any;
@@ -20,7 +36,7 @@ export class CtxGitRepo {
         data: Uint8Array;
     }>;
     headOid: any;
-    headTreeOid: string;
+    headTreeOid: any;
     /**
      * Discover server capabilities and resolve the branch head.
      */
@@ -66,6 +82,46 @@ export class CtxGitRepo {
      */
     readFile(path: any): Promise<string>;
     /**
+     * Build a hierarchical map of the repo using `memory.md` (or custom) files
+     * at each level. Perfect for AI agents that need to navigate context
+     * progressively without loading the whole repo.
+     *
+     * Each folder can contain a `memory.md` file describing:
+     *   - what lives in that folder
+     *   - subfolders and their purpose
+     *   - files and their summaries
+     *   - conventions for adding new content
+     *
+     * Usage pattern for an agent:
+     *   1. readMap({ maxDepth: 1 }) → get root memory.md + list of subfolders
+     *   2. agent/LLM picks relevant subfolder
+     *   3. readMap({ rootPath: "decisions", maxDepth: 1 }) → dive deeper
+     *   4. Repeat until leaf, then readFile() specific files
+     *
+     * @param {object} [options]
+     * @param {string} [options.indexFile="memory.md"] — filename to read at each level
+     * @param {string} [options.rootPath=""] — start from this path
+     * @param {number} [options.maxDepth=3] — how many levels to recurse
+     * @param {boolean} [options.includeFileList=true] — list non-index files at each level
+     */
+    readMap(options?: {
+        indexFile?: string;
+        rootPath?: string;
+        maxDepth?: number;
+        includeFileList?: boolean;
+    }): Promise<{
+        path: any;
+        description: any;
+        files: any[];
+        subfolders: any[];
+    }>;
+    _buildMap(treeOid: any, prefix: any, indexFile: any, maxDepth: any, depth: any, includeFileList: any): Promise<{
+        path: any;
+        description: any;
+        files: any[];
+        subfolders: any[];
+    }>;
+    /**
      * Write a single file and push in one shot.
      * Convenience wrapper around `writeFiles`.
      */
@@ -100,14 +156,7 @@ export class CtxGitRepo {
         oid: string;
         type: "blob" | "tree" | "commit";
     }[];
-    _prepareCommit(operations: any, commitInfo: any): Promise<{
-        newCommitOid: string;
-        newObjects: {
-            type: string;
-            oid: string;
-            content: Uint8Array<ArrayBuffer>;
-        }[];
-    }>;
+    _prepareCommit(operations: any, commitInfo: any): any;
     /**
      * Recursively walk down `parts` from the given tree, creating/updating/deleting
      * entries along the way.

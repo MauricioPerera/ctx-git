@@ -105,18 +105,5 @@ export function parseStream(buffer) {
   };
 }
 
-/**
- * Concatenate multiple Uint8Array into one.
- * @param {Uint8Array[]} arrays
- */
-export function concat(arrays) {
-  let total = 0;
-  for (const a of arrays) total += a.length;
-  const out = new Uint8Array(total);
-  let offset = 0;
-  for (const a of arrays) {
-    out.set(a, offset);
-    offset += a.length;
-  }
-  return out;
-}
+// concat is re-exported from utils for historical import paths
+export { concat } from "./utils.mjs";

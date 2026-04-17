@@ -1,6 +1,8 @@
 // Git object parsers: commit, tree, blob.
 // https://git-scm.com/book/en/v2/Git-Internals-Git-Objects
 
+import { bytesToHex } from "./utils.mjs";
+
 const td = new TextDecoder();
 
 /**
@@ -91,10 +93,3 @@ export function blobToString(data) {
   return td.decode(data);
 }
 
-function bytesToHex(bytes) {
-  const hex = [];
-  for (const b of bytes) {
-    hex.push(b.toString(16).padStart(2, "0"));
-  }
-  return hex.join("");
-}

@@ -4,6 +4,7 @@
 // https://git-scm.com/docs/pack-format
 
 import zlib from "node:zlib";
+import { bytesToHex } from "./utils.mjs";
 
 export const OBJ_COMMIT = 1;
 export const OBJ_TREE = 2;
@@ -165,10 +166,3 @@ function readUint32BE(buf, offset) {
   );
 }
 
-function bytesToHex(bytes) {
-  const hex = [];
-  for (const b of bytes) {
-    hex.push(b.toString(16).padStart(2, "0"));
-  }
-  return hex.join("");
-}

@@ -7,9 +7,8 @@
 //      Body: "<old-oid> <new-oid> <ref>\0<capabilities>\n" + flush-pkt + raw packfile
 //      Response: pkt-lines with "unpack ok", "ok <ref>" or "ng <ref> <reason>"
 
-import { encode, parseStream, FLUSH_PKT, concat } from "./pkt-line.mjs";
-
-const USER_AGENT = "ctx-git/0.1";
+import { encode, parseStream, FLUSH_PKT } from "./pkt-line.mjs";
+import { concat, stripDotGit, basicAuth, USER_AGENT } from "./utils.mjs";
 
 /**
  * Push a packfile to update a ref.
@@ -55,8 +54,7 @@ export async function gitReceivePack(repoUrl, params) {
     Accept: "application/x-git-receive-pack-result",
   };
   if (token) {
-    const basic = btoa(`x-access-token:${token}`);
-    headers.Authorization = `Basic ${basic}`;
+    headers.Authorization = basicAuth(token);
   }
 
   const res = await fetch(url, { method: "POST", headers, body });
@@ -111,6 +109,3 @@ function parseReceivePackResponse(bytes) {
   return { ok, unpack, refs, raw };
 }
 
-function stripDotGit(url) {
-  return url.replace(/\.git\/?$/, "").replace(/\/$/, "");
-}

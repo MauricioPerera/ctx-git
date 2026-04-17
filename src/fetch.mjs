@@ -9,9 +9,10 @@
 //     Band 2: progress messages
 //     Band 3: error messages
 
-import { encode, parseStream, concat, FLUSH_PKT, DELIM_PKT } from "./pkt-line.mjs";
+import { encode, parseStream, FLUSH_PKT, DELIM_PKT } from "./pkt-line.mjs";
+import { concat, stripDotGit, basicAuth, USER_AGENT } from "./utils.mjs";
 
-const USER_AGENT = "ctx-git/0.1";
+const td = new TextDecoder();
 
 /**
  * Fetch objects from remote.
@@ -41,8 +42,7 @@ export async function fetchObjects(repoUrl, options = {}) {
     Accept: "application/x-git-upload-pack-result",
   };
   if (options.token) {
-    const basic = btoa(`x-access-token:${options.token}`);
-    headers.Authorization = `Basic ${basic}`;
+    headers.Authorization = basicAuth(options.token);
   }
 
   const res = await fetch(url, { method: "POST", headers, body });
@@ -169,10 +169,10 @@ function parseFetchResponse(buffer) {
         packChunks.push(data);
       } else if (band === 0x02) {
         // progress
-        progress.push(new TextDecoder().decode(data));
+        progress.push(td.decode(data));
       } else if (band === 0x03) {
         // error
-        progress.push(`ERROR: ${new TextDecoder().decode(data)}`);
+        progress.push(`ERROR: ${td.decode(data)}`);
       }
       continue;
     }
@@ -204,6 +204,3 @@ function parseFetchResponse(buffer) {
   };
 }
 
-function stripDotGit(url) {
-  return url.replace(/\.git\/?$/, "").replace(/\/$/, "");
-}

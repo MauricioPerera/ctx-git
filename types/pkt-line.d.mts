@@ -20,13 +20,9 @@ export function parseStream(buffer: Uint8Array): {
     remaining: Uint8Array;
 };
 /**
- * Concatenate multiple Uint8Array into one.
- * @param {Uint8Array[]} arrays
- */
-export function concat(arrays: Uint8Array[]): Uint8Array<ArrayBuffer>;
-/**
  * Special control packets.
  */
 export const FLUSH_PKT: Uint8Array<ArrayBuffer>;
 export const DELIM_PKT: Uint8Array<ArrayBuffer>;
 export const RESPONSE_END_PKT: Uint8Array<ArrayBuffer>;
+export { concat } from "./utils.mjs";

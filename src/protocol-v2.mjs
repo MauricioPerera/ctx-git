@@ -6,9 +6,8 @@
 //   2. POST git-upload-pack with command=ls-refs → list of refs
 //   3. POST git-upload-pack with command=fetch [+ filters] → packfile response
 
-import { encode, parseStream, concat, FLUSH_PKT, DELIM_PKT } from "./pkt-line.mjs";
-
-const USER_AGENT = "ctx-git/0.1";
+import { encode, parseStream, FLUSH_PKT, DELIM_PKT } from "./pkt-line.mjs";
+import { concat, stripDotGit, basicAuth, USER_AGENT } from "./utils.mjs";
 
 /**
  * Discover server capabilities via info/refs endpoint.
@@ -27,9 +26,7 @@ export async function discoverCapabilities(repoUrl, options = {}) {
     Accept: "application/x-git-upload-pack-advertisement",
   };
   if (options.token) {
-    // GitHub accepts Basic auth with token as password, username can be anything
-    const basic = btoa(`x-access-token:${options.token}`);
-    headers.Authorization = `Basic ${basic}`;
+    headers.Authorization = basicAuth(options.token);
   }
 
   const res = await fetch(url, { method: "GET", headers });
@@ -95,8 +92,7 @@ export async function lsRefs(repoUrl, options = {}) {
     Accept: "application/x-git-upload-pack-result",
   };
   if (options.token) {
-    const basic = btoa(`x-access-token:${options.token}`);
-    headers.Authorization = `Basic ${basic}`;
+    headers.Authorization = basicAuth(options.token);
   }
 
   const res = await fetch(url, { method: "POST", headers, body });
@@ -133,7 +129,7 @@ export async function lsRefs(repoUrl, options = {}) {
 function buildLsRefsRequest(refPrefixes) {
   const pkts = [
     encode("command=ls-refs\n"),
-    encode("agent=ctx-git/0.1\n"),
+    encode(`agent=${USER_AGENT}\n`),
     encode("object-format=sha1\n"),
     DELIM_PKT,
     encode("peel\n"),
@@ -144,11 +140,4 @@ function buildLsRefsRequest(refPrefixes) {
   }
   pkts.push(FLUSH_PKT);
   return concat(pkts);
-}
-
-/**
- * Helper: strip trailing .git (and optional trailing /) for consistent URLs.
- */
-function stripDotGit(url) {
-  return url.replace(/\.git\/?$/, "").replace(/\/$/, "");
 }

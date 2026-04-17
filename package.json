@@ -1,6 +1,6 @@
 {
   "name": "ctx-git",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Tiny git client for AI agents: lazy-hydration reads + commit/push from any runtime. Zero dependencies. Works in Cloudflare Workers, Node 18+, browsers, Deno.",
   "keywords": [
     "git",
